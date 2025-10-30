@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSIT Attendance Analyzer</title>
+    
+<script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font setup */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: linear-gradient(to bottom right, #f0f4f8, #d9e2ec);
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        /* Custom Hover Effect for Main Card */
+        .main-card {
+             transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .main-card:hover {
+            box-shadow: 0 30px 60px -15px rgba(67, 56, 202, 0.3);
+            transform: translateY(-8px);
+        }
+        /* --- PROFESSIONAL SPLASH SCREEN STYLING --- */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1f2937; /* Dark Slate Gray for a formal look */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 100.0s ease-out, visibility 5.0s ease-out;
+            padding: 20px;
+            text-align: center;
+        }
+        #splash-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .splash-element {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .animate-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .splash-logo {
+            letter-spacing: 0.15em;
+        }
+        .splash-text-formal {
+            color: #d1d5db; /* Light gray text */
+            font-weight: 300;
+        }
+        .splash-credits-formal {
+            color: #6b7280; /* Subtler gray for credits */
+            font-size: 0.85rem;
+        }
+        .splash-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid #6366f1; /* Indigo spinner */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- 1. SPLASH SCREEN (PROFESSIONAL ANIMATION) -->
+    <div id="splash-screen">
+        <h1 id="splash-logo" class="text-7xl md:text-8xl font-black text-white mb-4 splash-element splash-logo">
+            PSIT
+        </h1>
+        <h2 id="splash-title" class="text-3xl md:text-4xl font-light text-white mb-10 splash-element">
+            Attendance Analyzer
+        </h2>
+        <div id="splash-disclaimer-1" class="text-lg md:text-xl splash-text-formal mb-3 splash-element">
+            This project is purely for fun and learning purposes.
+        </div>
+        <div id="splash-disclaimer-2" class="text-lg md:text-xl splash-text-formal mb-8 splash-element">
+            No one's feelings are intended to be hurt.
+        </div>
+        <div id="splash-loading" class="splash-spinner mb-6 splash-element"></div>
+        <p id="splash-credits" class="splash-credits-formal splash-element">
+            Created by Servesh Seth and supported by Ayushi Dwivedi & Akanksha Shukla.
+        </p>
+    </div>
+
+
+    <!-- 2. NAME INPUT MODAL -->
+    <div id="name-input-modal" class="modal-overlay">
+        <div class="modal-content bg-white p-8 md:p-10 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+            <h2 class="text-2xl font-bold text-indigo-700 mb-4">Welcome, User!</h2>
+            <p class="text-gray-600 mb-6">
+                Please enter your name for a personalized experience and to save your data safely.
+            </p>
+            <input type="text" id="user-name-input" placeholder="Your Full Name (e.g., Servesh Seth)"
+                class="p-3 w-full border-2 border-indigo-300 rounded-lg focus:ring-indigo-600 focus:border-indigo-600 shadow-inner bg-white mb-4">
+
+            <button onclick="saveAndCloseNameModal()"
+                class="w-full bg-indigo-600 text-white p-3 rounded-xl font-semibold hover:bg-indigo-700 transition duration-300 shadow-lg transform hover:scale-[1.01]">
+                Start Analyzing
+            </button>
+            <p id="name-error" class="text-red-500 text-sm mt-2 hidden">Please enter a valid name.</p>
+        </div>
+    </div>
+
+    <!-- 3. MAIN APPLICATION CARD -->
+    <div class="w-full max-w-6xl bg-white rounded-3xl shadow-3xl p-6 md:p-12 main-card border border-gray-100" id="main-content" style="opacity: 0; visibility: hidden;">
+        
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-indigo-700 leading-tight tracking-tight">
+                PSIT Attendance Analyzer
+            </h1>
+            <p class="text-gray-600 mt-3 text-xl font-medium">90% Target | Status | Planner Check</p>
+            <p id="personalized-greeting" class="text-purple-600 text-lg font-bold mt-2">Hello, Guest!</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
+
+            <!-- INPUT SECTION -->
+            <div class="lg:col-span-2 space-y-8 p-6 bg-gray-50 rounded-2xl border border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Enter Current Data
+                </h2>
+
+                <div class="flex flex-col transform hover:scale-[1.01] transition duration-200">
+                    <label for="total-lectures" class="text-sm font-semibold text-gray-700 mb-2">Total Lectures Held</label>
+                    <input type="number" id="total-lectures" value="472" placeholder="e.g., 472"
+                        class="p-4 border-2 border-indigo-300 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 shadow-inner bg-white"
+                        min="0">
+                </div>
+
+                <div class="flex flex-col transform hover:scale-[1.01] transition duration-200">
+                    <label for="total-absent-oaa" class="text-sm font-semibold text-gray-700 mb-2">Total Absent (Including OAA)</label>
+                    <input type="number" id="total-absent-oaa" value="51" placeholder="e.g., 51"
+                        class="p-4 border-2 border-indigo-300 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 shadow-inner bg-white"
+                        min="0">
+                </div>
+
+                <div class="flex flex-col transform hover:scale-[1.01] transition duration-200">
+                    <label for="total-oaa" class="text-sm font-semibold text-gray-700 mb-2">Official Approved Attendance (OAA)</label>
+                    <input type="number" id="total-oaa" value="40" placeholder="e.g., 40"
+                        class="p-4 border-2 border-indigo-300 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 shadow-inner bg-white"
+                        min="0">
+                    <p class="text-xs text-indigo-500 mt-2 font-medium">OAA lectures are deducted from total absence.</p>
+                </div>
+                
+                <!-- NEW BUNK/ATTENDANCE PLANNER MODULE -->
+                <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 pt-6 flex items-center border-purple-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
+                    </svg>
+                    Attendance Planner (Projection)
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Planned Bunks Input -->
+                    <div class="flex flex-col transform hover:scale-[1.01] transition duration-200">
+                        <label for="planned-bunks" class="text-sm font-semibold text-gray-700 mb-2">Planned Future Bunks (Lectures to Miss)</label>
+                        <input type="number" id="planned-bunks" value="0" placeholder="e.g., 5"
+                            class="p-4 border-2 border-red-400 rounded-xl focus:ring-red-600 focus:border-red-600 shadow-inner bg-white"
+                            min="0">
+                        <p class="text-xs text-red-500 mt-2 font-medium">Lectures you plan to miss (increases absence).</p>
+                    </div>
+                    
+                    <!-- Planned Attended Input -->
+                    <div class="flex flex-col transform hover:scale-[1.01] transition duration-200">
+                        <label for="planned-attended" class="text-sm font-semibold text-gray-700 mb-2">Planned Future Attendance (Extra Classes to Attend)</label>
+                        <input type="number" id="planned-attended" value="0" placeholder="e.g., 10"
+                            class="p-4 border-2 border-green-400 rounded-xl focus:ring-green-600 focus:border-green-600 shadow-inner bg-white"
+                            min="0">
+                        <p class="text-xs text-green-600 mt-2 font-medium">Lectures you plan to attend (increases total and attended).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULT SECTION -->
+            <div class="lg:col-span-2 flex flex-col items-center p-8 bg-indigo-100 rounded-2xl shadow-xl border border-indigo-300">
+                <h2 class="text-2xl font-bold text-indigo-700 mb-6">Your Attendance Status</h2>
+
+                <div id="result-container" class="relative flex items-center justify-center w-52 h-52 rounded-full border-4 border-indigo-400 transition duration-500 mb-6">
+                    <div class="absolute inset-0 rounded-full flex items-center justify-center transition duration-500" id="glowing-ring">
+                    </div>
+                    <div class="text-center z-10">
+                        <span id="attendance-percentage" class="text-6xl font-extrabold text-gray-900">0.00%</span>
+                    </div>
+                </div>
+
+                <div id="status-message" class="mt-4 p-4 rounded-xl w-full text-center font-extrabold text-xl transition duration-300 shadow-lg">
+                    Enter Data
+                </div>
+                
+                 <div id="projected-status-section" class="mt-4 p-5 bg-purple-100 border-l-4 border-purple-600 rounded-xl w-full hidden shadow-md">
+                    <h3 class="text-lg font-bold text-purple-700 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 9a1 1 0 000 2h2a1 1 0 100-2h-2z" clip-rule="evenodd" />
+                        </svg>
+                        Projected Status:
+                    </h3>
+                    <p class="mt-2 text-base text-purple-800">
+                        After your plan, projected attendance will be **<span id="projected-percentage" class="font-extrabold text-xl">0.00%</span>**.
+                    </p>
+                    <p id="projected-message" class="text-sm mt-1 font-medium"></p>
+                </div>
+
+
+                <div id="bunking-section" class="mt-4 p-5 bg-green-50 border-l-4 border-green-600 rounded-xl w-full hidden shadow-md">
+                    <h3 class="text-lg font-bold text-green-700 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zm-3 7v2a1 1 0 001 1h4a1 1 0 001-1V9a1 1 0 00-1-1H8a1 1 0 00-1 1z" />
+                        </svg>
+                        Lectures You Can Still Miss:
+                    </h3>
+                    <p class="mt-2 text-base text-green-800">
+                        You can miss **<span id="bunks-remaining" class="font-extrabold text-xl">0</span>** more lectures
+                        while staying above <span class="font-bold">90%</span>.
+                    </p>
+                </div>
+
+                <div id="progress-bar-container" class="w-full mt-6">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">90% Target Progress</p>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div id="attendance-progress" class="h-3 rounded-full bg-indigo-500 transition-all duration-700" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="catch-up-section" class="mt-8 p-5 bg-red-50 border-l-4 border-red-600 rounded-xl w-full hidden shadow-md">
+                    <h3 class="text-lg font-bold text-red-700 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-7v3a1 1 0 102 0v-3a1 1 0 10-2 0zM9 5a1 1 0 001 1h.01a1 1 0 100-2H10a1 1 0 00-1 1z" clip-rule="evenodd" />
+                        </svg>
+                        Plan to Reach 90%:
+                    </h3>
+                    <p class="mt-2 text-base text-red-800">
+                        You need to attend at least **<span id="lectures-needed" class="font-extrabold text-xl">0</span>** extra lectures.
+                    </p>
+                    <p class="text-sm text-red-600 mt-1">
+                        (This is approximately **<span id="days-needed" class="font-extrabold">0</span>** day(s), based on 8 lectures per day).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BREAKDOWN & REWARD SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mt-12 pt-8 border-t border-gray-200">
+
+             <!-- Current Status Breakdown -->
+            <div class="p-6 bg-blue-50 rounded-2xl shadow-lg border border-blue-300">
+                <h3 class="text-xl font-bold text-blue-700 border-b pb-3 mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                      <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H10z" clip-rule="evenodd" />
+                    </svg>
+                    Current Status Breakdown
+                </h3>
+                <div class="space-y-3 text-gray-700">
+                    <p class="flex justify-between items-center text-sm font-medium border-b border-blue-200 pb-2">
+                        <span>Total Lectures Held (L)</span>
+                        <span id="breakdown-total-lectures" class="font-bold text-indigo-600">0</span>
+                    </p>
+                    <p class="flex justify-between items-center text-sm font-medium border-b border-blue-200 pb-2">
+                        <span>Net Absent Lectures (A - OAA)</span>
+                        <span id="breakdown-net-absent" class="font-bold text-red-600">0</span>
+                    </p>
+                    <p class="flex justify-between items-center text-sm font-medium border-b border-blue-200 pb-2">
+                        <span>Current Attended Lectures (L - Net Absent)</span>
+                        <span id="breakdown-attended" class="font-bold text-green-600">0</span>
+                    </p>
+                    <p class="flex justify-between items-center text-sm font-medium">
+                        <span>Percentage Absent (A/L * 100)</span>
+                        <span id="breakdown-percent-absent" class="font-bold text-red-600">0.00%</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Future Projected Status (Detailed Planner Summary) -->
+            <div id="projected-section" class="p-6 bg-purple-50 rounded-2xl shadow-lg border border-purple-300">
+                <h3 class="text-xl font-bold text-purple-700 border-b pb-3 mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.586 7h3.114a1 1 0 011 1v7a1 1 0 01-1 1h-3.114l2.214 2.4A1 1 0 0116 19H6a3 3 0 01-3-3V6zm7 3a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    Planner Impact Summary
+                </h3>
+                <div class="space-y-4 text-gray-700">
+                    <p class="flex justify-between items-center text-sm font-medium border-b border-purple-200 pb-2">
+                        <span>Planned Bunks (+Absent):</span>
+                        <span id="planner-bunks-count" class="font-bold text-red-600">0</span>
+                    </p>
+                    <p class="flex justify-between items-center text-sm font-medium border-b border-purple-200 pb-2">
+                        <span>Planned Attendance (+Total):</span>
+                        <span id="planner-attended-count" class="font-bold text-green-600">0</span>
+                    </p>
+                    <p class="flex justify-between items-center text-base font-bold p-3 bg-purple-100 rounded-lg shadow-md border border-purple-300">
+                        <span>NET LECTURES ADDED:</span>
+                        <span id="planner-net-change" class="font-extrabold text-lg text-purple-800">0</span>
+                    </p>
+                    <div id="planner-projected-message" class="text-center p-2 rounded-lg font-semibold text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Reward Structure -->
+            <div class="p-6 bg-yellow-50 rounded-2xl shadow-lg border border-yellow-300">
+                <h3 class="text-xl font-bold text-yellow-700 border-b pb-3 mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707l-.707-.707V8a6 6 0 00-6-6zM10 18a3 3 0 110-6 3 3 0 010 6z" />
+                    </svg>
+                    Reward Structure
+                </h3>
+                <table class="w-full text-sm text-gray-700 border-collapse table-auto">
+                    <thead>
+                        <tr class="bg-yellow-200 text-yellow-800">
+                            <th class="p-3 text-left rounded-tl-lg">Attendance (%)</th>
+                            <th class="p-3 text-right rounded-tr-lg">Reward Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-yellow-300">
+                            <td class="p-2 text-left font-semibold">97.0% - 98.9%</td>
+                            <td class="p-2 text-right font-bold text-green-600">₹3,000</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2 text-left font-semibold">99.0% - 100.0%</td>
+                            <td class="p-2 text-right font-bold text-green-600">₹5,000</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div id="reward-section" class="mt-4 p-3 rounded-lg shadow-inner hidden">
+                    <h4 class="text-base font-semibold" id="reward-title"></h4>
+                    <p id="reward-message" class="text-sm"></p>
+                </div>
+
+                <p class="text-sm mt-6 p-3 bg-red-100 border-l-4 border-red-600 rounded-lg shadow-md">
+                    <strong class="text-red-800">Medical/Leave Limit Note:</strong> You can claim official medical leave for a maximum of **14 days** (approx. 112 lectures). More will not be approved.
+                </p>
+            </div>
+        </div>
+        
+        <!-- 4. SUGGESTIONS FORM -->
+        <div id="suggestions-form" class="mt-12 p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 shadow-inner">
+            <h2 class="text-3xl font-bold text-indigo-700 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z" />
+                </svg>
+                Share Your Suggestions
+            </h2>
+            <p class="text-gray-600 mb-4">Tell us what features you'd like to see next or if you found a bug!</p>
+
+            <textarea id="suggestion-text" rows="4" placeholder="Your valuable suggestion here..."
+                class="p-4 w-full border-2 border-gray-300 rounded-xl focus:ring-purple-600 focus:border-purple-600 shadow-inner bg-white resize-none"></textarea>
+
+            <button id="submit-suggestion-btn" onclick="submitSuggestion()"
+                class="mt-4 bg-purple-600 text-white p-3 rounded-xl font-semibold hover:bg-purple-700 transition duration-300 shadow-lg transform hover:scale-[1.01] flex items-center justify-center disabled:opacity-50">
+                <span id="suggestion-button-text">Submit Suggestion</span>
+                <span id="suggestion-loading-spinner" class="hidden spinner-small ml-2"></span>
+            </button>
+            <p id="suggestion-message" class="text-sm mt-3 hidden p-2 rounded-lg"></p>
+        </div>
+
+
+        <!-- FOOTER -->
+        <footer class="mt-10 pt-6 border-t border-gray-300 text-center">
+            <p class="text-sm text-gray-500">
+                <strong class="text-indigo-600">Formula Used:</strong> $100 - (\frac{\text{Total Absent} - \text{OAA}}{\text{Total Lecture}} \times 100)$
+            </p>
+            <div id="error-display" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden text-left font-medium"></div>
+            <p class="text-xs text-gray-400 mt-2">User ID: <span id="user-id-display">Loading...</span></p>
+        </footer>
+
+    </div>
+
+    <!-- FIREBASE AND JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, setLogLevel, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // IMPORTANT: Global variables are required for the platform environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth, userId;
+        let userName = 'Guest'; // Global state for user's name
+        setLogLevel('Debug');
+
+        // Debounce function to limit Firestore writes
+        window.debounce = (func, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        };
+        
+        // --- UI VISIBILITY AND ANIMATION FUNCTIONS ---
+        
+        function animateSplash() {
+            const elements = [
+                { id: 'splash-logo', delay: 200 },
+                { id: 'splash-title', delay: 400 },
+                { id: 'splash-disclaimer-1', delay: 1000 },
+                { id: 'splash-disclaimer-2', delay: 1500 },
+                { id: 'splash-loading', delay: 2200 },
+                { id: 'splash-credits', delay: 2700 },
+            ];
+
+            elements.forEach(item => {
+                setTimeout(() => {
+                    document.getElementById(item.id)?.classList.add('animate-in');
+                }, item.delay);
+            });
+            
+            // Start fade out after all animations are done
+            setTimeout(hideSplashScreen, 3500);
+        }
+
+        function hideSplashScreen() {
+            const splash = document.getElementById('splash-screen');
+            const mainContent = document.getElementById('main-content');
+            
+            splash.classList.add('fade-out');
+            
+            // Make main content visible and smooth transition
+            mainContent.style.visibility = 'visible';
+            mainContent.style.opacity = '1';
+            document.body.style.overflow = 'auto'; 
+        }
+        
+        function showNameModal() {
+            document.getElementById('name-input-modal').classList.add('show');
+            document.getElementById('user-name-input').focus();
+        }
+
+        function hideNameModal() {
+            document.getElementById('name-input-modal').classList.remove('show');
+        }
+
+        function updateGreeting(name) {
+             document.getElementById('personalized-greeting').textContent = `Hello, ${name}! Start analyzing your attendance.`;
+        }
+
+        // --- NAME HANDLING LOGIC ---
+
+        window.saveAndCloseNameModal = async () => {
+            const input = document.getElementById('user-name-input');
+            const name = input.value.trim();
+            const nameError = document.getElementById('name-error');
+
+            if (name.length < 2) {
+                nameError.classList.remove('hidden');
+                return;
+            }
+            nameError.classList.add('hidden');
+
+            userName = name;
+            updateGreeting(userName);
+            hideNameModal();
+            
+            // Save the user name to their private document
+            if (db && userId) {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/attendance_data`, 'current_session');
+                try {
+                    await setDoc(docRef, { userName: userName, lastUpdated: new Date().toISOString() }, { merge: true });
+                    console.log("User name saved.");
+                } catch (e) {
+                    console.error("Error saving user name: ", e);
+                }
+            }
+            
+            calculateAttendance(); 
+        };
+
+
+        // --- FIREBASE INITIALIZATION AND DATA LOAD ---
+
+        // Firestore Data Management (Private User Path)
+        window.saveData = window.debounce(async () => {
+            if (!db || !userId) return;
+
+            const totalLectures = document.getElementById('total-lectures').value;
+            const totalAbsentOAA = document.getElementById('total-absent-oaa').value;
+            const totalOAA = document.getElementById('total-oaa').value;
+            const plannedBunks = document.getElementById('planned-bunks').value; // Changed ID
+            const plannedAttended = document.getElementById('planned-attended').value; // New ID
+
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/attendance_data`, 'current_session');
+
+            try {
+                await setDoc(docRef, {
+                    userName: userName, 
+                    totalLectures: totalLectures || 0,
+                    totalAbsentOAA: totalAbsentOAA || 0,
+                    totalOAA: totalOAA || 0,
+                    plannedBunks: plannedBunks || 0, // Saved new planner data
+                    plannedAttended: plannedAttended || 0, // Saved new planner data
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+                console.log("Data successfully saved to Firestore.");
+            } catch (e) {
+                console.error("Error writing document: ", e);
+            }
+        }, 1000); // Save only once per second
+
+        window.loadData = async () => {
+            if (!db || !userId) return;
+
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/attendance_data`, 'current_session');
+
+            try {
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Load Attendance Data
+                    document.getElementById('total-lectures').value = data.totalLectures || '';
+                    document.getElementById('total-absent-oaa').value = data.totalAbsentOAA || '';
+                    document.getElementById('total-oaa').value = data.totalOAA || '';
+                    document.getElementById('planned-bunks').value = data.plannedBunks || '0'; // Load new planner data
+                    document.getElementById('planned-attended').value = data.plannedAttended || '0'; // Load new planner data
+                    
+                    // Load User Name
+                    if (data.userName) {
+                        userName = data.userName;
+                        updateGreeting(userName);
+                    }
+                    console.log("Data successfully loaded from Firestore.");
+                } else {
+                    console.log("No saved data found for this user.");
+                }
+            } catch (e) {
+                console.error("Error reading document: ", e);
+            }
+
+            calculateAttendance(); 
+            
+            if (userName === 'Guest') {
+                showNameModal();
+            }
+        };
+
+
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                window.db = db;
+                window.auth = auth;
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        window.userId = userId;
+                        document.getElementById('user-id-display').textContent = userId;
+                        console.log("Firebase initialized. User ID:", userId);
+                        window.loadData();
+                    } else {
+                        userId = crypto.randomUUID();
+                        window.userId = userId;
+                        document.getElementById('user-id-display').textContent = userId + ' (Temp)';
+                        console.log("Signed out or Anonymous. Using temporary ID:", userId);
+                        window.loadData();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                document.getElementById('error-display').textContent = `Firebase Error: ${error.message}`;
+                document.getElementById('error-display').classList.remove('hidden');
+                hideSplashScreen();
+            }
+        }
+        
+        // --- SUGGESTIONS SUBMISSION LOGIC ---
+
+        window.submitSuggestion = async () => {
+            const suggestionText = document.getElementById('suggestion-text').value.trim();
+            const submitBtn = document.getElementById('submit-suggestion-btn');
+            const btnText = document.getElementById('suggestion-button-text');
+            const loadingSpinner = document.getElementById('suggestion-loading-spinner');
+            const messageDisplay = document.getElementById('suggestion-message');
+
+            if (suggestionText.length < 10) {
+                showMessage(messageDisplay, 'Suggestion must be at least 10 characters long.', 'bg-red-100 text-red-700');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            btnText.textContent = 'Submitting...';
+            loadingSpinner.classList.remove('hidden');
+            messageDisplay.classList.add('hidden');
+
+            try {
+                const collectionRef = collection(db, `artifacts/${appId}/public/data/suggestions`);
+                
+                await addDoc(collectionRef, {
+                    suggestion: suggestionText,
+                    submittedBy: userName,
+                    userId: userId,
+                    timestamp: serverTimestamp(),
+                    appVersion: '1.3'
+                });
+                
+                showMessage(messageDisplay, '✅ Thank you! Your suggestion has been successfully submitted.', 'bg-green-100 text-green-700');
+                document.getElementById('suggestion-text').value = ''; 
+                
+            } catch (error) {
+                console.error("Error submitting suggestion: ", error);
+                showMessage(messageDisplay, `❌ Submission Failed: ${error.message}`, 'bg-red-100 text-red-700');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Submit Suggestion';
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+        
+        function showMessage(element, text, classes) {
+            element.textContent = text;
+            element.className = `text-sm mt-3 p-2 rounded-lg ${classes}`;
+            element.classList.remove('hidden');
+        }
+        
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .spinner-small {
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top: 2px solid #ffffff;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                animation: spin 1s linear infinite;
+                display: inline-block;
+            }
+        `;
+        document.head.appendChild(style);
+
+
+        initializeFirebase();
+
+        document.addEventListener('DOMContentLoaded', () => {
+             // Start the professional splash animation
+             animateSplash();
+
+             // Add event listeners to all input fields for real-time calculation and saving
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    calculateAttendance();
+                    if (window.saveData) window.saveData();
+                });
+            });
+            calculateAttendance(); 
+        });
+
+
+    </script>
+
+    <script>
+        // ------------------------------------
+        // PSIT Attendance Calculation Logic (Pure JS)
+        // ------------------------------------
+
+        // Input Elements
+        const totalLecturesInput = document.getElementById('total-lectures');
+        const totalAbsentOAAInput = document.getElementById('total-absent-oaa');
+        const totalOAAInput = document.getElementById('total-oaa');
+        
+        // Planner Inputs (New)
+        const plannedBunksInput = document.getElementById('planned-bunks'); 
+        const plannedAttendedInput = document.getElementById('planned-attended'); 
+
+        // Result Elements
+        const percentageDisplay = document.getElementById('attendance-percentage');
+        const statusMessage = document.getElementById('status-message');
+        const errorDisplay = document.getElementById('error-display');
+        const glowingRing = document.getElementById('glowing-ring');
+        const resultContainer = document.getElementById('result-container');
+        const attendanceProgress = document.getElementById('attendance-progress');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        // Catch-Up Elements
+        const catchUpSection = document.getElementById('catch-up-section');
+        const lecturesNeededDisplay = document.getElementById('lectures-needed');
+        const daysNeededDisplay = document.getElementById('days-needed');
+
+        // Bunking Allowance
+        const bunkingSection = document.getElementById('bunking-section');
+        const bunksRemainingDisplay = document.getElementById('bunks-remaining');
+
+        // Projection (Planner)
+        const projectedStatusSection = document.getElementById('projected-status-section');
+        const projectedPercentageDisplay = document.getElementById('projected-percentage');
+        const projectedMessage = document.getElementById('projected-message');
+
+        const plannerBunksCount = document.getElementById('planner-bunks-count');
+        const plannerAttendedCount = document.getElementById('planner-attended-count');
+        const plannerNetChange = document.getElementById('planner-net-change');
+
+        // Reward Elements
+        const rewardSection = document.getElementById('reward-section');
+        const rewardTitle = document.getElementById('reward-title');
+        const rewardMessage = document.getElementById('reward-message');
+
+        // Breakdown Elements
+        const breakdownTotalLectures = document.getElementById('breakdown-total-lectures');
+        const breakdownNetAbsent = document.getElementById('breakdown-net-absent');
+        const breakdownAttended = document.getElementById('breakdown-attended');
+        const breakdownPercentAbsent = document.getElementById('breakdown-percent-absent');
+
+
+        const MIN_ATTENDANCE_PERCENTAGE = 90; 
+        const LECTURES_PER_DAY = 8; 
+
+        function calculateAttendance() {
+            if (window.userId) {
+                 userIdDisplay.textContent = window.userId;
+            }
+
+            // Reset state
+            errorDisplay.classList.add('hidden');
+            catchUpSection.classList.add('hidden');
+            rewardSection.classList.add('hidden');
+            bunkingSection.classList.add('hidden');
+            projectedStatusSection.classList.add('hidden');
+
+            let percentage = 0;
+            let netAbsent = 0;
+            let totalLectures = 0;
+            let totalAbsentOAA = 0;
+            let totalOAA = 0;
+            let plannedBunks = 0; // New
+            let plannedAttended = 0; // New
+            let validCalculation = true;
+
+            try {
+                // 1. Get and clean inputs
+                totalLectures = Math.max(0, parseFloat(totalLecturesInput.value) || 0);
+                totalAbsentOAA = Math.max(0, parseFloat(totalAbsentOAAInput.value) || 0);
+                totalOAA = Math.max(0, parseFloat(totalOAAInput.value) || 0);
+                plannedBunks = Math.max(0, parseFloat(plannedBunksInput.value) || 0); // New
+                plannedAttended = Math.max(0, parseFloat(plannedAttendedInput.value) || 0); // New
+
+                // 2. Input Validation and Error Handling
+                if (totalLectures === 0 && (totalAbsentOAA > 0 || totalOAA > 0)) {
+                    throw new Error("Total Lectures Held cannot be zero if other values are present.");
+                } else if (totalOAA > totalAbsentOAA) {
+                     throw new Error("OAA (Approved Absence) cannot be greater than Total Absent.");
+                } else if (totalAbsentOAA > totalLectures) {
+                     throw new Error("Total Absent cannot exceed Total Lectures Held.");
+                }
+
+                // 3. Current Calculation
+                if (totalLectures > 0) {
+                    netAbsent = totalAbsentOAA - totalOAA;
+                    const percentageAbsent = (netAbsent / totalLectures) * 100;
+                    percentage = 100 - percentageAbsent;
+                    percentage = Math.max(0, Math.min(100, percentage));
+                } else {
+                    percentage = 100; // If 0 total lectures, assume 100% until a lecture is held
+                }
+
+            } catch (error) {
+                displayError('⚠️ ' + error.message);
+                validCalculation = false;
+            }
+
+            if (validCalculation) {
+                updateResults(percentage, totalLectures, netAbsent);
+                updateBreakdown(totalLectures, netAbsent, percentage);
+                checkCatchUp(percentage, totalLectures, netAbsent);
+                checkReward(percentage);
+                checkBunkingAllowance(percentage, totalLectures, netAbsent);
+                
+                // NEW: Calculate projection based on planner inputs
+                calculatePlannerProjection(totalLectures, netAbsent, plannedBunks, plannedAttended);
+            } else {
+                // Reset UI on error
+                resetUIOnError();
+            }
+        }
+
+        /**
+         * Calculates and displays the projected attendance percentage using the Planner inputs.
+         */
+        function calculatePlannerProjection(currentTotalLectures, currentNetAbsent, plannedBunks, plannedAttended) {
+            
+            plannerBunksCount.textContent = plannedBunks;
+            plannerAttendedCount.textContent = plannedAttended;
+
+            // Only show the projection section if the planner is being used or if current data is valid
+            if (currentTotalLectures === 0 && (plannedBunks > 0 || plannedAttended > 0)) {
+                 projectedStatusSection.classList.add('hidden');
+                 plannerNetChange.textContent = 'N/A';
+                 return;
+            }
+            
+            if (currentTotalLectures > 0) {
+                
+                const projectedTotalLectures = currentTotalLectures + plannedAttended;
+                const projectedNetAbsent = currentNetAbsent + plannedBunks;
+                
+                // Calculation of Projected Attended Lectures
+                const projectedAttendedLectures = projectedTotalLectures - projectedNetAbsent;
+                
+                // Net change in lectures (attended - bunked)
+                plannerNetChange.textContent = plannedAttended - plannedBunks; 
+                
+                let projectedPercentage = (projectedAttendedLectures / projectedTotalLectures) * 100;
+                projectedPercentage = Math.max(0, Math.min(100, projectedPercentage));
+                
+                projectedPercentageDisplay.textContent = `${projectedPercentage.toFixed(2)}%`;
+                projectedStatusSection.classList.remove('hidden');
+
+
+                // Update Projected Status Message
+                if (plannedBunks > 0 || plannedAttended > 0) {
+                    if (projectedPercentage >= 90) {
+                        projectedMessage.textContent = 'Your plan keeps you safely ABOVE the 90% target.';
+                        plannerNetChange.className = 'font-extrabold text-lg text-green-700';
+                    } else if (projectedPercentage >= 85) {
+                        projectedMessage.textContent = 'WARNING: Your plan puts you in the critical 85%-90% zone.';
+                         plannerNetChange.className = 'font-extrabold text-lg text-yellow-700';
+                    } else {
+                        projectedMessage.textContent = 'DANGER: Your plan drops your attendance below 85%.';
+                         plannerNetChange.className = 'font-extrabold text-lg text-red-700';
+                    }
+                } else {
+                    projectedStatusSection.classList.add('hidden');
+                }
+            } else {
+                projectedStatusSection.classList.add('hidden');
+            }
+        }
+        
+        function resetUIOnError() {
+             const defaultText = 'N/A';
+                percentageDisplay.textContent = defaultText;
+                statusMessage.textContent = 'Invalid Input';
+                statusMessage.className = 'mt-4 p-4 rounded-xl w-full text-center font-extrabold text-xl transition duration-300 shadow-lg bg-red-100 text-red-700';
+                
+                document.getElementById('glowing-ring').className = 'absolute inset-0 rounded-full flex items-center justify-center transition duration-500';
+                resultContainer.classList.remove('border-green-600', 'border-red-300', 'border-yellow-300', 'border-green-300');
+                resultContainer.classList.add('border-gray-300');
+
+                breakdownTotalLectures.textContent = defaultText;
+                breakdownNetAbsent.textContent = defaultText;
+                breakdownAttended.textContent = defaultText;
+                breakdownPercentAbsent.textContent = defaultText;
+                attendanceProgress.style.width = '0%';
+
+                projectedPercentageDisplay.textContent = defaultText;
+                projectedMessage.textContent = 'Error in Calculation';
+                projectedMessage.className = 'text-sm mt-1 font-medium text-red-700';
+                plannerNetChange.textContent = defaultText;
+        }
+
+        function checkBunkingAllowance(percentage, totalLectures, netAbsent) {
+            bunkingSection.classList.add('hidden');
+
+            if (percentage >= MIN_ATTENDANCE_PERCENTAGE && totalLectures > 0) {
+                const maxAllowedNetAbsent = Math.floor(totalLectures * (1 - (MIN_ATTENDANCE_PERCENTAGE / 100)));
+                const bunksRemaining = maxAllowedNetAbsent - netAbsent;
+
+                if (bunksRemaining > 0) {
+                    bunksRemainingDisplay.textContent = bunksRemaining;
+                    bunkingSection.classList.remove('hidden');
+                    bunkingSection.classList.add('bg-green-50', 'border-green-600');
+                }
+            }
+        }
+        
+        function displayError(message) {
+            errorDisplay.textContent = message;
+            errorDisplay.classList.remove('hidden');
+        }
+
+        function updateBreakdown(totalLectures, netAbsent, percentage) {
+            const currentAttended = totalLectures - netAbsent;
+            const percentAbsent = (100 - percentage).toFixed(2);
+
+            breakdownTotalLectures.textContent = totalLectures;
+            breakdownNetAbsent.textContent = netAbsent;
+            breakdownAttended.textContent = currentAttended;
+            breakdownPercentAbsent.textContent = `${percentAbsent}%`;
+        }
+
+        function updateResults(percentage) {
+            const formattedPercentage = percentage.toFixed(2);
+            percentageDisplay.textContent = `${formattedPercentage}%`;
+
+            const progressValue = Math.min(100, (percentage / 100) * 100); 
+            attendanceProgress.style.width = `${progressValue}%`;
+
+            glowingRing.className = 'absolute inset-0 rounded-full flex items-center justify-center transition duration-500';
+            statusMessage.className = 'mt-4 p-4 rounded-xl w-full text-center font-extrabold text-xl transition duration-300 shadow-lg';
+            resultContainer.classList.remove('border-gray-300', 'border-green-600', 'border-red-300', 'border-yellow-300', 'border-green-300');
+            resultContainer.classList.add('border-indigo-400');
+            attendanceProgress.classList.remove('bg-green-600', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-indigo-500');
+
+
+            if (percentage >= 99.0) {
+                statusMessage.textContent = '🏆 EXCELLENT! Top Reward Level.';
+                statusMessage.classList.add('bg-green-200', 'text-green-800');
+                glowingRing.classList.add('glowing-ring-safe'); 
+                resultContainer.classList.add('border-green-600');
+                attendanceProgress.classList.add('bg-green-600');
+            } else if (percentage >= MIN_ATTENDANCE_PERCENTAGE) {
+                statusMessage.textContent = '✅ TARGET ACHIEVED! You are Safe.';
+                statusMessage.classList.add('bg-green-100', 'text-green-700');
+                glowingRing.classList.add('glowing-ring-safe'); 
+                resultContainer.classList.add('border-green-400');
+                attendanceProgress.classList.add('bg-green-500');
+            } else if (percentage >= 85) { 
+                statusMessage.textContent = '⚠️ WARNING! Below Target.';
+                statusMessage.classList.add('bg-yellow-100', 'text-yellow-700');
+                glowingRing.classList.add('glowing-ring-danger'); 
+                resultContainer.classList.add('border-yellow-400');
+                attendanceProgress.classList.add('bg-yellow-500');
+            } else {
+                statusMessage.textContent = '🚨 DANGER ZONE! Significantly Below Target.';
+                statusMessage.classList.add('bg-red-100', 'text-red-700');
+                glowingRing.classList.add('glowing-ring-danger'); 
+                resultContainer.classList.add('border-red-400');
+                attendanceProgress.classList.add('bg-red-500');
+            }
+            
+            if (!document.querySelector('.glowing-ring-safe')) {
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .glowing-ring-safe { box-shadow: 0 0 40px rgba(34, 197, 94, 1); background: rgba(34, 197, 94, 0.05); }
+                    .glowing-ring-danger { box-shadow: 0 0 40px rgba(239, 68, 68, 1); background: rgba(239, 68, 68, 0.05); }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        function checkCatchUp(percentage, totalLectures, netAbsent) {
+            catchUpSection.classList.add('hidden');
+
+            if (percentage < MIN_ATTENDANCE_PERCENTAGE && totalLectures > 0) {
+                const currentAttended = totalLectures - netAbsent;
+
+                // Formula: L_needed = ceil( ( (Target/100) * L_current - A_current) / (1 - Target/100) )
+                const lecturesNeeded = Math.ceil(( (MIN_ATTENDANCE_PERCENTAGE / 100) * totalLectures - currentAttended) / (1 - (MIN_ATTENDANCE_PERCENTAGE / 100)));
+
+                if (lecturesNeeded > 0) {
+                    const daysNeeded = Math.ceil(lecturesNeeded / LECTURES_PER_DAY);
+
+                    lecturesNeededDisplay.textContent = lecturesNeeded;
+                    daysNeededDisplay.textContent = daysNeeded;
+                    catchUpSection.classList.remove('hidden');
+                }
+            }
+        }
+
+        function checkReward(percentage) {
+            rewardSection.classList.add('hidden');
+            rewardTitle.textContent = '';
+            rewardMessage.textContent = '';
+            rewardSection.className = 'mt-4 p-3 rounded-lg shadow-inner hidden'; 
+
+            if (percentage >= 97.0 && percentage <= 98.9) {
+                rewardTitle.textContent = '🌟 Potential Reward: ₹3,000';
+                rewardMessage.textContent = 'Congratulations! You may be eligible for the ₹3,000 reward.';
+                rewardSection.classList.remove('hidden');
+                rewardSection.classList.add('bg-yellow-200', 'text-yellow-800');
+            } else if (percentage >= 99.0) {
+                rewardTitle.textContent = '🏆 Potential Reward: ₹5,000';
+                rewardMessage.textContent = 'Excellent! You may be eligible for the top ₹5,000 reward.';
+                rewardSection.classList.remove('hidden');
+                rewardSection.classList.add('bg-green-200', 'text-green-800');
+            }
+        }
+
+    </script>
+</body>
+</html>
